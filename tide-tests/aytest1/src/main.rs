@@ -110,7 +110,10 @@ async fn main() -> tide::Result<()> {
             let hb = &req.state().registry;
             let name: String = req.param("name")?.into();
             let mut data0 = BTreeMap::new();
-            data0.insert("name".to_string(), name.clone());
+            let mut names: Vec<String> = vec![];
+            names.push(name.clone());
+            names.push("staticname".to_string());
+            data0.insert("name".to_string(), names);
             Ok(hb.render(&name, &data0)?)
         });
     app.listen("127.0.0.1:8080").await?;
