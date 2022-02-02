@@ -12,15 +12,21 @@ use tempfile::TempDir;
 use tide::prelude::*;
 use tide::{Body, Request, Response, StatusCode};
 
+use handlebars::Handlebars;
+use std::collections::BTreeMap;
+use tide_handlebars::prelude::*;
+
 #[derive(Clone)]
 struct AyTestState {
     tempdir: Arc<TempDir>,
+    registry: Handlebars<'static>,
 }
 
 impl AyTestState {
     fn try_new() -> Result<Self, IoError> {
         Ok(Self {
             tempdir: Arc::new(tempfile::tempdir()?),
+            registry: Handlebars::new(),
         })
     }
 
@@ -85,9 +91,27 @@ async fn main() -> tide::Result<()> {
 
     // let mut app = tide::new();
     tide::log::start();
-    let mut app = tide::with_state(AyTestState::try_new()?);
+    let mut state = AyTestState::try_new()?;
+    state
+        .registry
+        .register_template_file("simple.html", "./templates/simple.html")
+        .unwrap();
+    state
+        .registry
+        .register_templates_directory("", "./templates/")
+        .unwrap();
+
+    let mut app = tide::with_state(state);
     app.at("/orders/shoes").post(order_shoes);
     app.at("/file/:file").put(upload_file).get(download_file);
+    app.at("/:name")
+        .get(|req: tide::Request<AyTestState>| async move {
+            let hb = &req.state().registry;
+            let name: String = req.param("name")?.into();
+            let mut data0 = BTreeMap::new();
+            data0.insert("name".to_string(), name.clone());
+            Ok(hb.render(&name, &data0)?)
+        });
     app.listen("127.0.0.1:8080").await?;
     Ok(())
 }
