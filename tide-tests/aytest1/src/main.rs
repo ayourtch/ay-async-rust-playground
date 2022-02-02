@@ -104,6 +104,7 @@ async fn main() -> tide::Result<()> {
     let mut app = tide::with_state(state);
     app.at("/orders/shoes").post(order_shoes);
     app.at("/file/:file").put(upload_file).get(download_file);
+    app.at("/static/").serve_dir("static/")?;
     app.at("/:name")
         .get(|req: tide::Request<AyTestState>| async move {
             let hb = &req.state().registry;
