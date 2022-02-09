@@ -164,6 +164,7 @@ struct TcpTestQuery {
     target: String,
     user: String,
     pass: String,
+    command: String,
 }
 
 async fn tcptest(mut req: Request<AyTestState>) -> tide::Result {
@@ -174,7 +175,12 @@ async fn tcptest(mut req: Request<AyTestState>) -> tide::Result {
     use smol::Async;
     use std::net::TcpStream;
 
-    let TcpTestQuery { target, user, pass } = req.query()?;
+    let TcpTestQuery {
+        target,
+        user,
+        pass,
+        command,
+    } = req.query()?;
     let server: SocketAddr = target.parse()?;
     let mut stream = Async::<TcpStream>::connect(server).await?;
 
@@ -186,7 +192,7 @@ async fn tcptest(mut req: Request<AyTestState>) -> tide::Result {
 
     session.userauth_password(&user, &pass).await?;
     let mut channel = session.channel_session().await?;
-    channel.exec("ps -aux\n").await?;
+    channel.exec(&command).await?;
     let mut s = String::new();
     channel.read_to_string(&mut s).await?;
 
