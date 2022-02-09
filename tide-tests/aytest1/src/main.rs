@@ -103,6 +103,7 @@ async fn main() -> tide::Result<()> {
 
     let mut app = tide::with_state(state);
     app.at("/orders/shoes").post(order_shoes);
+    app.at("/request").get(request_url);
     app.at("/file/:file").put(upload_file).get(download_file);
     app.at("/static/").serve_dir("static/")?;
     app.at("/:name")
@@ -139,6 +140,20 @@ async fn upload_file(mut req: Request<AyTestState>) -> tide::Result<serde_json::
 
     Ok(json!({ "bytes": bytes_written }))
 }
+
+#[derive(Deserialize)]
+struct RequestQuery {
+    url: String,
+}
+
+async fn request_url(mut req: Request<AyTestState>) -> tide::Result {
+    let RequestQuery { url } = req.query().unwrap();
+    let mut res: surf::Response = surf::get(url).await?;
+    let data: String = res.body_string().await?;
+
+    Ok(data.into())
+}
+
 async fn download_file(mut req: Request<AyTestState>) -> tide::Result {
     let path = req.param("file")?;
     let fs_path = req.state().path().join(path);
