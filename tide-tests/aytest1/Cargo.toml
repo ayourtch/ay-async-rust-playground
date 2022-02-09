@@ -17,3 +17,5 @@ tempfile = "*"
 handlebars = { version = "*", features = ["dir_source"] }
 tide-handlebars = "*"
 surf = "*"
+async-ssh2 = { version = "*", git = "https://github.com/spebern/async-ssh2.git" }
+smol = "*"

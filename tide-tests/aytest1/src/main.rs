@@ -16,6 +16,10 @@ use handlebars::Handlebars;
 use std::collections::BTreeMap;
 use tide_handlebars::prelude::*;
 
+use async_ssh2::Session;
+use smol::Async;
+use std::net::TcpStream;
+
 #[derive(Clone)]
 struct AyTestState {
     tempdir: Arc<TempDir>,
@@ -104,6 +108,7 @@ async fn main() -> tide::Result<()> {
     let mut app = tide::with_state(state);
     app.at("/orders/shoes").post(order_shoes);
     app.at("/request").get(request_url);
+    app.at("/tcptest").get(tcptest);
     app.at("/file/:file").put(upload_file).get(download_file);
     app.at("/static/").serve_dir("static/")?;
     app.at("/:name")
@@ -151,6 +156,41 @@ async fn request_url(mut req: Request<AyTestState>) -> tide::Result {
     let mut res: surf::Response = surf::get(url).await?;
     let data: String = res.body_string().await?;
 
+    Ok(data.into())
+}
+
+#[derive(Deserialize)]
+struct TcpTestQuery {
+    target: String,
+    user: String,
+    pass: String,
+}
+
+async fn tcptest(mut req: Request<AyTestState>) -> tide::Result {
+    use async_ssh2::Session;
+    use async_std::io::ReadExt;
+    use async_std::io::WriteExt;
+    use async_std::net::SocketAddr;
+    use smol::Async;
+    use std::net::TcpStream;
+
+    let TcpTestQuery { target, user, pass } = req.query()?;
+    let server: SocketAddr = target.parse()?;
+    let mut stream = Async::<TcpStream>::connect(server).await?;
+
+    // one example: https://users.rust-lang.org/t/strange-behaviour-of-async-sftp/62671
+
+    let mut session = Session::new()?;
+    session.set_tcp_stream(stream);
+    session.handshake().await?;
+
+    session.userauth_password(&user, &pass).await?;
+    let mut channel = session.channel_session().await?;
+    channel.exec("ps -aux\n").await?;
+    let mut s = String::new();
+    channel.read_to_string(&mut s).await?;
+
+    let data = format!("result: {}", s);
     Ok(data.into())
 }
 
