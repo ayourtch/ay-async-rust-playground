@@ -144,7 +144,9 @@ async fn upload_file(mut req: Request<AyTestState>) -> tide::Result<serde_json::
     });
 
     let mut metadata: HashMap<String, String> = HashMap::new();
-    if let Some(file) = std::fs::File::open(path).ok() {
+    let fpath = fs_path.canonicalize()?.to_str().unwrap().to_string();
+    if let Some(file) = std::fs::File::open(&fpath).ok() {
+        tide::log::info!("reading exif", { fpath: fpath });
         let mut bufreader = std::io::BufReader::new(&file);
         let exifreader = exif::Reader::new();
         let exif = exifreader.read_from_container(&mut bufreader)?;
@@ -155,6 +157,7 @@ async fn upload_file(mut req: Request<AyTestState>) -> tide::Result<serde_json::
             );
         }
     }
+    eprintln!("Metadata: {:?}", &metadata);
 
     Ok(json!({ "bytes": bytes_written, "meta": metadata }))
 }

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+	
+
+<form id="profilePicForm" action="javascript:submitForm()" method="post" enctype="multipart/form-data">
+
+    <input type="file" name="myFile" id="profilePicInput">
+    <input type="submit">
+</form>
+	<script>
+
+function submitForm(){
+	profileInput = document.getElementById('profilePicInput');
+
+
+	let formData = new FormData();
+	// formData.append("file", profilePicInput.files[0]);
+
+    
+	const xhr = new XMLHttpRequest();
+    
+	xhr.open('PUT', '../file/test.jpg');
+    
+	xhr.onload = () => {
+		console.log("profile updated");
+		alert(`Loaded: ${xhr.status} ${xhr.response}`);
+	};
+	// xhr.send(formData);
+	xhr.send(profilePicInput.files[0]);
+}
+
+	</script>
+
+</body>
+</html>
+
