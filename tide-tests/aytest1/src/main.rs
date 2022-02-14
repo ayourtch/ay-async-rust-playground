@@ -122,13 +122,13 @@ async fn main() -> tide::Result<()> {
             data0.insert("name".to_string(), names);
             Ok(hb.render(&name, &data0)?)
         });
-    app.listen("127.0.0.1:8080").await?;
+    app.listen("0.0.0.0:8080").await?;
     Ok(())
 }
 
 async fn upload_file(mut req: Request<AyTestState>) -> tide::Result<serde_json::Value> {
-    let path = req.param("file")?;
-    let fs_path = req.state().path().join(path);
+    let path = req.param("file")?.to_string();
+    let fs_path = req.state().path().join(&path);
 
     let file = OpenOptions::new()
         .create(true)
@@ -143,7 +143,20 @@ async fn upload_file(mut req: Request<AyTestState>) -> tide::Result<serde_json::
         path: fs_path.canonicalize()?.to_str()
     });
 
-    Ok(json!({ "bytes": bytes_written }))
+    let mut metadata: HashMap<String, String> = HashMap::new();
+    if let Some(file) = std::fs::File::open(path).ok() {
+        let mut bufreader = std::io::BufReader::new(&file);
+        let exifreader = exif::Reader::new();
+        let exif = exifreader.read_from_container(&mut bufreader)?;
+        for f in exif.fields() {
+            metadata.insert(
+                format!("{} {}", f.tag, f.ifd_num),
+                format!("{}", f.display_value().with_unit(&exif)),
+            );
+        }
+    }
+
+    Ok(json!({ "bytes": bytes_written, "meta": metadata }))
 }
 
 #[derive(Deserialize)]
